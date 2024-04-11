@@ -38,7 +38,7 @@ There are some tags supported by default:
 Additionally, any custom tags can be added, to be passed as `replacements` argument to `Localization.get`. These don't have a set syntax (it's a straight string replacement) but it's recommended to use all caps surrounded by square brackets for consistency.
 
 An example entry using a custom tag:  
-`moveToLocation	Move to [LOCATION]`, when called with `Localization.get("moveToLocation", {{"[LOCATION]", "McDonalds"}})`, will result in the text "Action: Move to McDonalds".
+`moveToLocation	Move to [LOCATION]`, when called with `Localization.get("moveToLocation", {{"[LOCATION]", "McDonalds"}})`, will result in the text "Move to McDonalds".
 
 When loading, any empty lines, and lines starting with `#`, are ignored entirely.
 
