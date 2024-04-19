@@ -52,19 +52,27 @@ function Localization.load(language)
 	local textFile, error = pd.file.open(path)
 	if error then
 		print("File load error:", error)
+		return
 	end
 
+	local fileSize = pd.file.getSize(path)
+	local numEntriesApprox = fileSize / 100
+	textEntries = table.create(0, numEntriesApprox)
+
+	local content = textFile:read(fileSize)
+	textFile:close()
+
+	local commentByte = sbyte('#')
 	local numEntries = 0
-	local line = textFile:readline()
-	while line ~= nil do
-		for k, v in sgmatch(line, "(.-)\t(.*)") do
-			if k ~= "" and sbyte(k, 1, 1) ~= '#' then
+
+	for line, k, v in sgmatch(content, "[\r\n]*((%g-)\t(.-))[\r\n]+") do
+		if sbyte(line, 1, 1) ~= commentByte then
+			if k ~= "" then
 				--print("Loc entry:", k)
 				textEntries[k] = v
 				numEntries += 1
 			end
 		end
-		line = textFile:readline()
 	end
 	print("Localization load done,", numEntries, "entries")
 
@@ -135,6 +143,10 @@ function Localization.check(languages, measurements)
 	end
 
 	print("\nCHECKING LOCALIZATION ENTRIES\n")
+	print("Languages:")
+	for _, language in ipairs(languages) do
+		print("  - " .. language)
+	end
 	local mainLanguageTable = cachedLanguages[Localization.mainLanguage]
 	local keys = {}
 	for key, _ in pairs(mainLanguageTable) do
@@ -144,46 +156,63 @@ function Localization.check(languages, measurements)
 
 	local numIssues = 0
 
-	-- Check length
-	if measurements ~= nil then
-		for _, lang in ipairs(languages) do
-			local translations = cachedLanguages[lang]
-
-			for _, key in ipairs(keys) do
-				for _, measurement in ipairs(measurements) do
-					if string.find(key, measurement.keyMatchPattern) then
-						local translation = getSpecific(translations, key)
-						--print("Measured text: " .. translations[key] .. " - " .. width .. "px")
-						if measurement.maxHeight == nil then
-							local width = measurement.font:getTextWidth(translation)
-							if width > measurement.maxWidth then
-								print(lang .. ": Entry '" .. key .. "' is too long: " .. width .. " vs " .. measurement.maxWidth)
-								numIssues += 1
+	-- Check potential key/format issues
+	print("\n-- CHECKING FILE FORMAT --")
+	for _, lang in ipairs(languages) do
+		local path = Localization.languageFilePath .. "strings-" .. lang .. ".txt"
+		if not pd.file.exists(path) then
+			print(lang .. " localization file doesn't exist")
+			numIssues += 1
+		else
+			local textFile, error = pd.file.open(path)
+			if error then
+				print("File load error:", error)
+				numIssues += 1
+			else
+				local line = textFile:readline()
+				local lineNumber = 0
+				while line ~= nil do
+					lineNumber += 1
+					if line ~= "" and sbyte(line, 1, 1) ~= sbyte('#') then
+						local keyExists = false
+						for k, v in sgmatch(line, "(.-)\t(.*)") do
+							if k ~= "" then
+								keyExists = true
 							end
-						else
-							pd.graphics.setFont(measurement.font)
-							local _, height = pd.graphics.getTextSizeForMaxWidth(translation, measurement.maxWidth)
-							if height > measurement.maxHeight then
-								print(lang .. ": Entry '" .. key .. "' is too tall: " .. height .. " vs " .. measurement.maxHeight)
+						end
+						if not keyExists then
+							if sbyte(line, 1, 1) ~= sbyte('#') then
+								print(lang .. ": Potential format issue (no key/value pair detected) at line " .. lineNumber .. ":", line)
 								numIssues += 1
 							end
 						end
 					end
+					line = textFile:readline()
 				end
+				textFile:close()
 			end
 		end
 	end
 
-	-- Compare tags
+	-- Compare tags/keys
+	print("\n-- CHECKING TAGS/KEYS --")
 	for _, lang in ipairs(languages) do
 		if lang ~= Localization.mainLanguage then
 			local translations = cachedLanguages[lang]
+
+			for k, _ in pairs(translations) do
+				if mainLanguageTable[k] == nil then
+					print(lang .. ": Key '" .. k .. "' does not exist in main language (" .. Localization.mainLanguage .. ")")
+					numIssues += 1
+				end
+			end
 
 			for _, key in ipairs(keys) do
 				local valueMain = mainLanguageTable[key]
 				local valueLang = translations[key]
 				if valueLang == nil then
 					print(lang .. ": Missing key '" .. key .. "'")
+					numIssues += 1
 				else
 					-- Get tags in main language
 					local tagsMain = {}
@@ -210,6 +239,37 @@ function Localization.check(languages, measurements)
 									print(lang .. ": Entry '" .. key .. "' uses an incorrect tag: ".. tagsLang[i] .. " vs " .. tagsMain[i])
 									numIssues += 1
 								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
+	-- Check text measurements
+	print("\n-- CHECKING MEASUREMENTS --")
+	if measurements ~= nil then
+		for _, lang in ipairs(languages) do
+			local translations = cachedLanguages[lang]
+
+			for _, key in ipairs(keys) do
+				for _, measurement in ipairs(measurements) do
+					if string.find(key, measurement.keyMatchPattern) then
+						local translation = getSpecific(translations, key)
+						--print("Measured text: " .. translations[key] .. " - " .. width .. "px")
+						if measurement.maxHeight == nil then
+							local width = measurement.font:getTextWidth(translation)
+							if width > measurement.maxWidth then
+								print(lang .. ": Entry '" .. key .. "' is too long: " .. width .. " vs " .. measurement.maxWidth)
+								numIssues += 1
+							end
+						else
+							pd.graphics.setFont(measurement.font)
+							local _, height = pd.graphics.getTextSizeForMaxWidth(translation, measurement.maxWidth)
+							if height > measurement.maxHeight then
+								print(lang .. ": Entry '" .. key .. "' is too tall: " .. height .. " vs " .. measurement.maxHeight)
+								numIssues += 1
 							end
 						end
 					end

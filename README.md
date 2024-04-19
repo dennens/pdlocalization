@@ -1,5 +1,5 @@
 # pdlocalization
-LUA-based localization for Playdate
+Powerful localization library for Playdate. Entirely lua-based, with error checking, nested localization, and more.
 
 # Setup
 Download the Localization.lua file to your projects source.
@@ -35,7 +35,7 @@ There are some tags supported by default:
 `[LLOWER:key]`: Same as above, but with lowercase instead.  
 `[NEWLINE]`: Insert a newline (`\n`) in the localized string.  
 `[EMPTY]`: Is replaced with an empty string. Useful if a tag should explicitly localize to an empty string.  
-Additionally, any custom tags can be added, to be passed as `replacements` argument to `Localization.get`. These don't have a set syntax (it's a straight string replacement) but it's recommended to use all caps surrounded by square brackets for consistency.
+Additionally, any custom tags can be added, to be passed as `replacements` argument to `Localization.get`. These don't have a set syntax (it's a straight string replacement) but it's recommended to use all caps surrounded by square brackets for consistency. Note that if there is no `[` in the line, no replacements will be made at all as an optimization.
 
 An example entry using a custom tag:  
 `moveToLocation	Move to [LOCATION]`, when called with `Localization.get("moveToLocation", {{"[LOCATION]", "McDonalds"}})`, will result in the text "Move to McDonalds".
