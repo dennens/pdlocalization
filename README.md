@@ -2,9 +2,9 @@
 Powerful localization library for Playdate. Entirely lua-based, with error checking, nested localization, and more.
 
 # Setup
-Download the Localization.lua file to your projects source.
+Download the Localization.lua file to your project's source.
 
-Then create a `strings-en.txt` file in the `languageFilePath` folder (`assets/loc/` by default). Within that text file, paste this text for testing, and save:
+Then create a `strings-en.txt` file in the `languageFilePath` folder (`assets/loc/` by default, see Configuration). Within that text file, paste this text for testing, and save:
 ```
 test1	Hello
 test2	World
@@ -26,11 +26,13 @@ When you run this, you should see a 'Hello World' in your console output.
 
 # Localization file syntax
 The file should be called `strings-<languageId>.txt`.  
-The basic syntax is tab-separated key-value pairs:  
-`key	value`  
-Tags can be added anywhere in the `value` strings, that will be replaced through the `Localization.get` call.  
-There are some tags supported by default:  
-`[L:key]`: Localizes the string with key `key` and slot it in the place where the tag was.  
+The basic syntax is tab-separated key-value pairs. Each line is a new pair:  
+```key1	value1
+key2	value2```
+  
+Tags can be added anywhere in the `value` strings. These tags will be replaced through the `Localization.get` call.  
+There are some tags supported by default:
+`[L:key]`: Localizes the string with key `key` and slots it in the place where the tag was.  
 `[LUPPER:key]`: Same as above, but will convert the localized string to uppercase.  
 `[LLOWER:key]`: Same as above, but with lowercase instead.  
 `[NEWLINE]`: Insert a newline (`\n`) in the localized string.  
@@ -38,27 +40,27 @@ There are some tags supported by default:
 Additionally, any custom tags can be added, to be passed as `replacements` argument to `Localization.get`. These don't have a set syntax (it's a straight string replacement) but it's recommended to use all caps surrounded by square brackets for consistency. Note that if there is no `[` in the line, no replacements will be made at all as an optimization.
 
 An example entry using a custom tag:  
-`moveToLocation	Move to [LOCATION]`, when called with `Localization.get("moveToLocation", {{"[LOCATION]", "McDonalds"}})`, will result in the text "Move to McDonalds".
+`moveToLocation	Move to [LOCATION]`, when called with `Localization.get("moveToLocation", {{"[LOCATION]", "McDonald's"}})`, will result in the text "Move to McDonald's".
 
-When loading, any empty lines, and lines starting with `#`, are ignored entirely.
+When loading, any empty lines, and lines starting with `#`, are ignored entirely, meaning `#` can be used for comment lines.
 
 # Configuration
-At the top of Localization.lua are a few things to configure if necessary:  
-`Localization.mainLanguage = "en"`: The 'main' language to use as the basis for checking localization entries in other languages for missing keys, inconsistent tag usage, etc.  
+At the top of Localization.lua are a few things that can be configured if necessary:  
+`Localization.mainLanguage = "en"`: The 'main' language to use as the basis for checking localization entries in other languages for missing keys, inconsistent tag usage, etc.
 `Localization.languageFilePath = "assets/loc/"`: The path to your localization files.  
-`Localization.cacheLanguages = true`: Whether loaded languages should be cached. Setting this to true prevents framedrops when loading a language a second time, but takes up more memory.  
-`Localization.defaultTextReplacements = { [...] }`: Default tags to replace. If you have any commonly used tags that you don't want to repeatedly define in the `replacements` argument to `Localization.get`, add them here.  
+`Localization.cacheLanguages = true`: Whether loaded languages should be cached. Setting this to true reduces the performance hit when loading a cached language, but takes up more memory.
+`Localization.defaultTextReplacements = { [...] }`: Default tags to replace. If you have any commonly used tags that you don't want to repeatedly define in the `replacements` argument to `Localization.get`, add them here.
 
-It's recommended to configure these as assignments from outside the Localization.lua file (e.g. `Localization.mainLanguage = "nl"` in main.lua) so that for any updates to this library you can fully overwrite the Localization.lua file without breaking your game.
+It's recommended to configure these as assignments from outside the Localization.lua file (e.g. `Localization.mainLanguage = "nl"` in main.lua) so that for any updates to this library you can fully overwrite the Localization.lua file without breaking your game. If you're overriding `Localization.defaultTextReplacements` outside of the Localization.lua file, be sure to also include the existing values.
 
 # API Documentation
 
 ## Localization.check(languages, measurements)
-Compares string entries in the language files, and prints missing entries, inconsistent tag usage, and keys of localized strings that don't fit within given measurements.
+Compares string entries in the language files, and prints missing entries, inconsistent tag usage, and keys of localized strings that don't fit within given measurements. This is meant to be used during development, as an easy sanity check on all localization entries.
 
 Arguments:  
 `languages`: Array of language identification strings, e.g. `{"en", "es"}`  
-`measurements`: Array of measurements to be used to check string sizes. Can be `nil`. e.g.:
+`measurements`: (Optional) Array of measurements to be used to check string sizes. e.g.:
 ```
 {
 {
@@ -79,12 +81,12 @@ Retrieves a localized entry from the currently loaded localization file.
 
 Arguments:  
 `key`: The key to retrieve  
-`replacements`: (Optional) An array of key-value arrays to be used when replacing text in the retrieved value, e.g. `{{"[TEST]", 5},}` to replace any instances of `[TEST]` with `5`.  
-`quiet`: (Optional) If false or absent, will print that the key could not be found.
+`replacements`: (Optional) An array of key-value arrays to be used when replacing text in the retrieved value, e.g. `{{"[TEST1]", 5},{"[TEST2]", "out of 7"}}` to replace any instances of `[TEST1]` with `5`, and all instances of `[TEST2]` with `out of 7`.
+`quiet`: (Optional) If false or absent, will print a warning if the key could not be found.
 
-If the value cannot be found, the key will be returned surrounded by ##s so you can identify any missing strings visually immediately.  
+If the value cannot be found, the key will be returned surrounded by ##s so you can visually identify any missing strings immediately.  
 Replacement values will be converted to strings automatically, so numbers and strings are both acceptable.  
-In addition to the passed `replacements`, `Localization.defaultTextReplacements` will also be replaced. The argument `replacements` will be processed first, so it's possible to override `defaultTextReplacements` if necessary.  
+In addition to the passed `replacements`, `Localization.defaultTextReplacements` will also be replaced. The argument `replacements` will be processed first, so it's possible to override `defaultTextReplacements` locally if necessary.  
 See 'Localization file syntax' for details on tags.
 
 ## Localization.getCurrentLanguage()
@@ -102,4 +104,6 @@ Upon successful load, all listener functions registered through `Localization.re
 Registers a function to be called when a new language has been loaded.
 
 Arguments:  
-`listener`: The function to be called. The function will be called without any arguments, as soon as a language was successfully loaded.
+`listener`: The function to be called. The function will be called as soon as a language was successfully loaded, with a boolean argument indicating whether the file was newly loaded: if false, it was loaded from the cache instead.
+
+`listener` should be a function with application lifetime. Multiple such functions may be registered.

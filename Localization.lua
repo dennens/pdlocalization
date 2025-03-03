@@ -36,7 +36,7 @@ function Localization.load(language)
 		textEntries = cachedLanguages[language]
 		
 		for _, listener in ipairs(listeners) do
-			listener()
+			listener(false)
 		end
 		return
 	end
@@ -77,7 +77,7 @@ function Localization.load(language)
 	print("Localization load done,", numEntries, "entries")
 
 	for _, listener in ipairs(listeners) do
-		listener()
+		listener(true)
 	end
 
 	if Localization.cacheLanguages then
